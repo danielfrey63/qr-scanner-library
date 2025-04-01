@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    /* Base Options: */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ES2016",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+
+    /* Strictness */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    /* If NOT transpiling code: */
+    "module": "ESNext", // Changed from CommonJS to ESNext for ES Module output
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    /* If your code runs in the DOM: */
+    "lib": ["dom", "es2016"],
+
+    /* Declaration Files */
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    /* Module Resolution Options */
+    "moduleResolution": "node",
+    "baseUrl": ".", // Allows absolute imports from the base directory
+    "paths": {
+      "@/*": ["src/*"] // Allows importing using '@/' alias for 'src/'
+    }
+  },
+  "include": ["src/**/*"], // Compile all files within the src directory
+  "exclude": ["node_modules", "dist", "tests"] // Exclude these directories
+}
