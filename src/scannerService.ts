@@ -33,6 +33,9 @@ class ScannerService {
     private animationFrameId: number | null = null;
     private canvasElement: HTMLCanvasElement;
     private canvasContext: CanvasRenderingContext2D;
+    // Store listener references for cleanup
+    private onMetadataLoadedListener: (() => void) | null = null;
+    private onVideoErrorListener: ((err: Event) => void) | null = null;
 
     /**
      * Initializes the ScannerService.
@@ -93,7 +96,8 @@ class ScannerService {
             let metadataLoaded = false;
             const videoElement = this.options.videoElement;
 
-            const onMetadataLoaded = () => {
+            // Define listeners and store references
+            this.onMetadataLoadedListener = () => {
                 if (metadataLoaded || !this.isScanning) return;
                 metadataLoaded = true;
                 this.log(LogLevel.INFO, "ScannerService: 'loadedmetadata' event fired.");
@@ -108,17 +112,18 @@ class ScannerService {
                 }
             };
 
-            const onVideoError = (err: Event) => {
+            this.onVideoErrorListener = (err: Event) => {
                 if (this.isScanning) {
                     this.log(LogLevel.ERROR, "ScannerService: Video element error event.", err);
                     this.options.onError(new Error("Video element encountered an error during setup or playback."));
-                    this.stop();
+                    this.stop(); // Stop scanning on video error
                 }
             };
 
             // Attach listeners
-            videoElement.addEventListener('loadedmetadata', onMetadataLoaded, { once: true });
-            videoElement.addEventListener('error', onVideoError, { once: true });
+            // Use stored references when adding listeners
+            videoElement.addEventListener('loadedmetadata', this.onMetadataLoadedListener, { once: true });
+            videoElement.addEventListener('error', this.onVideoErrorListener, { once: true });
 
             // Start the stream
             await this.cameraManager.startStream(this.options.deviceId);
@@ -128,10 +133,10 @@ class ScannerService {
             // Fallback check if 'loadedmetadata' event is missed
             if (!metadataLoaded && videoElement.readyState >= 2) { // HAVE_METADATA or higher
                  this.log(LogLevel.WARN, "ScannerService: 'loadedmetadata' potentially missed, triggering setup via readyState check.");
-                 onMetadataLoaded();
+                 this.onMetadataLoadedListener(); // Call stored listener reference
             }
 
-            // TODO: Explicitly remove listeners in stop()
+            // Listener removal is now handled in stop()
         } catch (error: any) {
             this.log(LogLevel.ERROR, "ScannerService: Failed to start camera.", error);
             this.isScanning = false;
@@ -156,7 +161,18 @@ class ScannerService {
             this.animationFrameId = null;
         }
 
-        // TODO: Explicitly remove listeners added in start()
+        // Remove event listeners explicitly
+        if (this.options.videoElement) {
+            if (this.onMetadataLoadedListener) {
+                this.options.videoElement.removeEventListener('loadedmetadata', this.onMetadataLoadedListener);
+                this.onMetadataLoadedListener = null; // Clear reference
+            }
+            if (this.onVideoErrorListener) {
+                this.options.videoElement.removeEventListener('error', this.onVideoErrorListener);
+                this.onVideoErrorListener = null; // Clear reference
+            }
+        }
+
         this.cameraManager.stopStream();
         this.log(LogLevel.INFO, "ScannerService: Scan stopped.");
     }
@@ -222,14 +238,6 @@ class ScannerService {
                 this.animationFrameId = requestAnimationFrame(this.scanLoop);
             }
         }, this.options.scanInterval);
-    }
-
-    /**
-     * Static method to list available camera devices.
-     * @returns A promise that resolves with an array of MediaDeviceInfo objects.
-     */
-    static async listCameras(): Promise<MediaDeviceInfo[]> {
-        return CameraManager.listDevices();
     }
 
     /**
