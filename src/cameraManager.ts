@@ -107,13 +107,8 @@ class CameraManager {
                         video.oncanplay = null;
                     };
 
-                    timeoutId = setTimeout(() => {
-                        if (resolved) return;
-                        // console.log("[CameraManager] Timeout waiting for video readiness/playback."); // Removed debug log
-                        resolved = true;
-                        cleanup();
-                        reject(new Error("Timeout waiting for video readiness or playback"));
-                    }, 2000); // 2 second timeout
+                    // Removed explicit timeout - rely on browser events and readyState checks
+                    // timeoutId = setTimeout(() => { ... }, 2000);
 
                     video.onloadedmetadata = () => {
                         if (resolved) return;

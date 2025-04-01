@@ -17,6 +17,9 @@ export { CameraManager };
 
 // Export the core options type for configuring the service
 export type { ScannerOptions } from './scannerService';
+// Export LogLevel and LoggerCallback types
+export { LogLevel } from './types/log';
+export type { LoggerCallback } from './types/log';
 
 // Potentially export QrDecoder if direct access to decoding logic is deemed useful,
 // otherwise keep it internal to the ScannerService. For now, let's keep it internal

@@ -1,3 +1,4 @@
+import { LogLevel, LoggerCallback } from './types/log'; // Import from library types
 import CameraManager from './cameraManager';
 import QrDecoder from './qrDecoder';
 
@@ -18,8 +19,7 @@ export type ScannerOptions = {
     /** Optional: Whether to stop scanning after the first successful scan (default: true). */
     stopOnScan?: boolean;
     /** Optional: Callback function for internal logging. */
-    // Logger now expects source as first argument
-    logger?: (source: string, level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG', message: string, data?: any) => void;
+    logger?: LoggerCallback; // Use the imported type
 };
 
 /**
@@ -74,7 +74,7 @@ class ScannerService {
         }
         this.canvasContext = context;
 
-        this.log('INFO', "ScannerService initialized.");
+        this.log(LogLevel.INFO, "ScannerService initialized.");
     }
 
     /**
@@ -83,10 +83,10 @@ class ScannerService {
      */
     async start(): Promise<void> {
         if (this.isScanning) {
-            this.log('WARN', "ScannerService: start() called while already scanning.");
+            this.log(LogLevel.WARN, "ScannerService: start() called while already scanning.");
             return;
         }
-        this.log('INFO', "ScannerService: Starting scan...");
+        this.log(LogLevel.INFO, "ScannerService: Starting scan...");
 
         try {
             // Setup listeners before starting stream
@@ -96,21 +96,21 @@ class ScannerService {
             const onMetadataLoaded = () => {
                 if (metadataLoaded || !this.isScanning) return;
                 metadataLoaded = true;
-                this.log('INFO', "ScannerService: 'loadedmetadata' event fired.");
+                this.log(LogLevel.INFO, "ScannerService: 'loadedmetadata' event fired.");
                 if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
                     this.canvasElement.width = videoElement.videoWidth;
                     this.canvasElement.height = videoElement.videoHeight;
-                    this.log('INFO', `ScannerService: Canvas dimensions set (${this.canvasElement.width}x${this.canvasElement.height}). Calling scanLoop().`);
+                    this.log(LogLevel.INFO, `ScannerService: Canvas dimensions set (${this.canvasElement.width}x${this.canvasElement.height}). Calling scanLoop().`);
                     this.scanLoop(); // Start the loop
                 } else {
-                    this.log('WARN', "ScannerService: 'loadedmetadata' fired but video dimensions are 0. Scan loop not started.");
+                    this.log(LogLevel.WARN, "ScannerService: 'loadedmetadata' fired but video dimensions are 0. Scan loop not started.");
                     // TODO: Consider adding delay/retry if video dimensions are 0
                 }
             };
 
             const onVideoError = (err: Event) => {
                 if (this.isScanning) {
-                    this.log('ERROR', "ScannerService: Video element error event.", err);
+                    this.log(LogLevel.ERROR, "ScannerService: Video element error event.", err);
                     this.options.onError(new Error("Video element encountered an error during setup or playback."));
                     this.stop();
                 }
@@ -123,19 +123,20 @@ class ScannerService {
             // Start the stream
             await this.cameraManager.startStream(this.options.deviceId);
             this.isScanning = true;
-            this.log('INFO', "ScannerService: Camera stream started successfully.");
+            this.log(LogLevel.INFO, "ScannerService: Camera stream started successfully.");
 
             // Fallback check if 'loadedmetadata' event is missed
             if (!metadataLoaded && videoElement.readyState >= 2) { // HAVE_METADATA or higher
-                 this.log('WARN', "ScannerService: 'loadedmetadata' potentially missed, triggering setup via readyState check.");
+                 this.log(LogLevel.WARN, "ScannerService: 'loadedmetadata' potentially missed, triggering setup via readyState check.");
                  onMetadataLoaded();
             }
 
             // TODO: Explicitly remove listeners in stop()
         } catch (error: any) {
-            this.log('ERROR', "ScannerService: Failed to start camera.", error);
+            this.log(LogLevel.ERROR, "ScannerService: Failed to start camera.", error);
             this.isScanning = false;
-            this.options.onError(error);
+            this.options.onError(error); // Forward the error via callback
+            throw error; // Re-throw the error to reject the start() promise
         }
     }
 
@@ -147,7 +148,7 @@ class ScannerService {
             // Already stopped
             return;
         }
-        this.log('INFO', "ScannerService: Stopping scan...");
+        this.log(LogLevel.INFO, "ScannerService: Stopping scan...");
         this.isScanning = false;
 
         if (this.animationFrameId) {
@@ -157,25 +158,25 @@ class ScannerService {
 
         // TODO: Explicitly remove listeners added in start()
         this.cameraManager.stopStream();
-        this.log('INFO', "ScannerService: Scan stopped.");
+        this.log(LogLevel.INFO, "ScannerService: Scan stopped.");
     }
 
     /**
      * The main loop that grabs frames, attempts decoding, and schedules the next frame.
      */
     private scanLoop = (): void => {
-        // this.log('DEBUG', "ScannerService: scanLoop tick"); // Ensure commented out
+        // this.log(LogLevel.DEBUG, "ScannerService: scanLoop tick"); // Ensure commented out
         // Stop loop if scanning is no longer active or video element is invalid/paused/ended
         if (!this.isScanning || !this.cameraManager.videoElement || this.cameraManager.videoElement.paused || this.cameraManager.videoElement.ended) {
             // Don't call stop() here as it might have been called intentionally
             if (this.isScanning) {
-                this.log('WARN', "ScannerService: Scan loop stopping due to video element state.");
+                this.log(LogLevel.WARN, "ScannerService: Scan loop stopping due to video element state.");
                 this.stop();
             }
             return;
         }
 
-        // this.log('DEBUG', "ScannerService: scanLoop - Drawing frame to canvas"); // Ensure commented out
+        // this.log(LogLevel.DEBUG, "ScannerService: scanLoop - Drawing frame to canvas"); // Ensure commented out
 
         try {
             // Ensure canvas dimensions match video
@@ -196,11 +197,11 @@ class ScannerService {
             const imageData = this.canvasContext.getImageData(0, 0, this.canvasElement.width, this.canvasElement.height);
 
             // Decode image data
-            // this.log('DEBUG', "ScannerService: scanLoop - Decoding image data"); // Ensure commented out
+            // this.log(LogLevel.DEBUG, "ScannerService: scanLoop - Decoding image data"); // Ensure commented out
             const decodedData = this.qrDecoder.decodeFromImageData(imageData);
 
             if (decodedData) {
-                this.log('INFO', "ScannerService: scanLoop - QR Code detected!", decodedData);
+                this.log(LogLevel.INFO, "ScannerService: scanLoop - QR Code detected!", decodedData);
                 // console.log("ScannerService: QR Code detected!", decodedData); // Keep console log commented
                 this.options.onScanSuccess(decodedData);
                 if (this.options.stopOnScan) {
@@ -210,7 +211,7 @@ class ScannerService {
             
             } // End of if(decodedData)
         } catch (error: any) {
-            this.log('ERROR', `ScannerService: Error in scan loop: ${error.message}`, error);
+            this.log(LogLevel.ERROR, `ScannerService: Error in scan loop: ${error.message}`, error);
             // TODO: Consider calling onError callback for scan loop errors
             // this.options.onError(new Error(`Scan loop error: ${error.message}`));
         }
@@ -240,29 +241,21 @@ class ScannerService {
     }
 
     // Helper logging function
-    private log(level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG', message: string, data?: unknown): void {
+    private log(level: LogLevel, message: string, data?: unknown): void {
         // If an external logger is provided via options, use it
         if (this.options.logger) {
-            // Prepare the message, potentially including stringified data
-            let logMessage = message;
-            if (data !== undefined) {
-                try {
-                    // Append stringified data to the main message string
-                    logMessage += ` ${JSON.stringify(data)}`;
-                } catch (e) {
-                    logMessage += ' [Unserializable data]'; // Append note if data can't be stringified
-                }
-            }
-            // Call the external logger with source 'Lib', level, and combined message
-            this.options.logger('Lib', level, logMessage);
+            // Call the external logger, passing the component name and optional data
+            // The external logger (remoteLog) will handle formatting and stringifying data
+            this.options.logger('Lib', level, 'ScannerService', message, data);
         } else {
-            // Fallback to console if no external logger is provided
+            // Fallback to console if no logger provided (e.g., direct library use)
             const consoleArgs = data !== undefined ? [message, data] : [message];
+            // Fallback console logging uses the LogLevel enum values
             switch (level) {
-                case 'INFO': console.info(...consoleArgs); break;
-                case 'WARN': console.warn(...consoleArgs); break;
-                case 'ERROR': console.error(...consoleArgs); break;
-                // case 'DEBUG': console.debug(...consoleArgs); break; // Keep DEBUG commented
+                case LogLevel.INFO: console.info(...consoleArgs); break;
+                case LogLevel.WARN: console.warn(...consoleArgs); break;
+                case LogLevel.ERROR: console.error(...consoleArgs); break;
+                case LogLevel.DEBUG: console.debug(...consoleArgs); break; // Use enum for DEBUG
                 default: console.log(...consoleArgs);
             }
         }
