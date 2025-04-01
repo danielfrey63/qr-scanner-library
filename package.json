@@ -1,22 +1,27 @@
 {
   "name": "qr-scanner-library",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
-  "description": "A TypeScript library for QR code scanning in the browser.",
+  "description": "A lightweight, TypeScript-based QR code scanning library for browser applications",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "qr",
     "qrcode",
     "scanner",
     "typescript",
-    "browser"
+    "browser",
+    "camera",
+    "webcam",
+    "jsqr"
   ],
   "author": "Daniel Frey <daniel.frey@xmatrix.ch>",
   "license": "MIT",
@@ -30,7 +35,8 @@
   "files": [
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "repository": {
     "type": "git",
@@ -39,5 +45,11 @@
   "bugs": {
     "url": "https://github.com/danielfrey63/qr-scanner-library/issues"
   },
-  "homepage": "https://github.com/danielfrey63/qr-scanner-library#readme"
+  "homepage": "https://github.com/danielfrey63/qr-scanner-library#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
