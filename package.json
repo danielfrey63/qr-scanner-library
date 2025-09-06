@@ -1,6 +1,6 @@
 {
   "name": "qr-scanner-library",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "A lightweight, TypeScript-based QR code scanning library for browser applications",
   "main": "dist/index.js",
