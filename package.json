@@ -11,7 +11,8 @@
     "dev": "tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "link:pkg": "npm run build && npm link"
   },
   "keywords": [
     "qr",

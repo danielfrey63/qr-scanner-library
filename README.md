@@ -136,3 +136,59 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Development (local link workflow)
+
+When developing this library alongside a consumer app (e.g., `qr-scanner-client/`) in the same repo, you can link it locally to iterate without publishing:
+
+```bash
+# In this library (qr-scanner-library/)
+npm run build
+npm link
+
+# In the consumer app (qr-scanner-client/)
+npm link qr-scanner-library
+
+# Run the app
+npm run dev
+```
+
+To unlink and return to the registry version inside the consumer app:
+
+```bash
+# In qr-scanner-client/
+npm unlink qr-scanner-library && npm i
+```
+
+You can also define helper scripts in the consumer app's `package.json` for convenience:
+
+```json
+{
+  "scripts": {
+    "link:dev": "npm link qr-scanner-library",
+    "unlink:dev": "npm unlink qr-scanner-library && npm i"
+  }
+}
+```
+
+## Publishing
+
+This package is configured to publish compiled artifacts and is suitable for public registries.
+
+Steps to publish a new version:
+
+```bash
+# 1) Bump version (choose patch/minor/major)
+npm version patch
+
+# 2) Build artifacts
+npm run build
+
+# 3) Publish (requires prior npm login)
+npm publish --access public
+```
+
+After publishing, consumers can install/update via:
+
+```bash
+npm i qr-scanner-library@latest
